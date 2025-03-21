@@ -1,4 +1,13 @@
-package com.guardians.gse.Service;
+package com.guardians.gse.service;
 
-public class RepositoryService {
+import com.guardians.gse.dto.RepositoryDto;
+import com.guardians.gse.dto.RepositoryRequest;
+import com.guardians.gse.dto.SearchRequest;
+
+import java.util.List;
+
+public interface RepositoryService {
+
+    List<RepositoryDto> searchAndSaveRepositories(SearchRequest request);
+    List<RepositoryDto> getFilteredRepositories(RepositoryRequest request);
 }
