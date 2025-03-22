@@ -8,6 +8,6 @@ import java.util.List;
 
 public interface RepositoryService {
 
-    List<RepositoryDto> searchAndSaveRepositories(SearchRequest request);
+    List<RepositoryDto> searchAndSaveRepositories(SearchRequest request, String query);
     List<RepositoryDto> getFilteredRepositories(RepositoryRequest request);
 }
