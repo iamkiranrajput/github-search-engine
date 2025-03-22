@@ -4,120 +4,124 @@ import com.guardians.gse.dto.RepositoryDto;
 import com.guardians.gse.dto.RepositoryRequest;
 import com.guardians.gse.dto.SearchRequest;
 import com.guardians.gse.exception.GitHubRateLimitException;
+import com.guardians.gse.mapper.Mapper;
 import com.guardians.gse.model.RepositoryEntity;
 import com.guardians.gse.repository.GithubRepoRepository;
 import com.guardians.gse.util.GitHubApiClient;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.HttpClientErrorException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @Service
 @Slf4j
 public class RepositoryServiceImpl implements RepositoryService {
 
+
     private final GithubRepoRepository repoRepository;
     private final GitHubApiClient gitHubApiClient;
+
 
     public RepositoryServiceImpl(GithubRepoRepository repoRepository, GitHubApiClient gitHubApiClient) {
         this.repoRepository = repoRepository;
         this.gitHubApiClient = gitHubApiClient;
     }
 
+    @Cacheable(value = "githubRepositories", key = "#query")
     @Override
-    @Transactional
-    public List<RepositoryDto> searchAndSaveRepositories(SearchRequest request) {
-        log.info("Fetching repositories from GitHub for language={}", request.getLanguage());
-
+    public List<RepositoryDto> searchAndSaveRepositories(SearchRequest request,String query) {
         try {
-            List<RepositoryDto> fetchedRepositories = gitHubApiClient.fetchRepositories(request);
 
-            for (RepositoryDto dto : fetchedRepositories) {
-                log.info("Processing Repository: ID={}, Name={}, Full Name={}, URL={} ",
-                        dto.getId(), dto.getName(), dto.getFullName(), dto.getUrl());
 
-                Optional<RepositoryEntity> existingEntity = repoRepository.findById(dto.getId());
-                if (existingEntity.isPresent()) {
-                    log.info("Repository with ID={} already exists, skipping save.", dto.getId());
-                    continue;
+            List<RepositoryDto> fetchedGitRepos = gitHubApiClient.fetchRepositories(request);
+
+            List<RepositoryEntity> entities = new ArrayList<>();
+
+            /* collecting only ids from fetched Git repos*/
+            List<Integer> reposIds = fetchedGitRepos.stream().map(RepositoryDto::getId).toList();
+
+
+            log.info("Retrieving Already Present Repositories id");
+            Set<Integer> dbIds = new HashSet<>(repoRepository.findAlreadyPresentRecords(reposIds));
+
+            log.info("Storing Collected Github Repositories into Database");
+            for (RepositoryDto dto : fetchedGitRepos) {
+                if (!dbIds.contains(dto.getId())) {
+                    RepositoryEntity entity = Mapper.dtoToRepositoryEntity(dto);
+                    entities.add(entity);
                 }
-                RepositoryEntity entity = getRepositoryEntity(dto);
-
-                repoRepository.save(entity);
             }
+            if(!entities.isEmpty()) repoRepository.saveAll(entities);
 
-            log.info("Fetched {} repositories from GitHub and saved to DB.", fetchedRepositories.size());
-            return fetchedRepositories;
 
-        } catch (GitHubRateLimitException e) {
-            log.error("GitHub API rate limit exceeded", e);
-            throw new GitHubRateLimitException("GitHub API rate limit exceeded. Try again later.");
-        } catch (HttpClientErrorException e) {
-            log.error("GitHub API returned an error: {}", e.getMessage());
-            throw new IllegalStateException("GitHub API error: " + e.getMessage());
-        } catch (DataAccessException e) {
-            log.error("Database error occurred while saving repositories", e);
-            throw new IllegalStateException("Database operation failed. Please try again.");
+            log.info("--- Total Repositories: {}", fetchedGitRepos.size());
+            log.info("--- New Repositories Saved in db: {}", entities.size());
+            log.info("--- Repositories Skipped (Already Present): {}", fetchedGitRepos.size() - entities.size());
+
+            return fetchedGitRepos;
+
+        }  catch (DataAccessException e) {
+            log.error("Database operation failed ", e);
+            throw new IllegalStateException("Database operation failed");
         }
     }
 
-    private static RepositoryEntity getRepositoryEntity(RepositoryDto dto) {
 
 
-        RepositoryEntity entity = new RepositoryEntity();
-        entity.setId(dto.getId());
-        entity.setName(dto.getName());
-        entity.setFullName(dto.getFullName());
-        entity.setDescription(dto.getDescription());
-        entity.setOwnerName(dto.getOwner().getLogin());
-        entity.setLanguage(dto.getLanguage());
-        entity.setStars(dto.getStars());
-        entity.setForks_count(dto.getForks());
-        entity.setHtml_url(dto.getUrl());
-        entity.setLastUpdated(dto.getLastUpdated());
-        return entity;
-    }
 
     @Override
     public List<RepositoryDto> getFilteredRepositories(RepositoryRequest request) {
-        log.info("Fetching repositories from database with filters: language={}, minStars={}, sort={}",
-                request.getLanguage(), request.getMinStars(), request.getSort());
+
+        log.info("Fetching repository: language={}, minStars={}, sort={}", request.getLanguage(), request.getMinStars(), request.getSort());
 
         try {
-            List<RepositoryEntity> repositories = repoRepository.findByLanguageAndStarsGreaterThanEqual(
-                    request.getLanguage(), request.getMinStars());
+            Sort sort = Sort.by(Sort.Direction.DESC, request.getSort());
 
-            System.out.println("----records"+repositories);
+            String language = ((request.getLanguage()==null) || (request.getLanguage().isEmpty()) ||(request.getLanguage().isBlank()))? null :request.getLanguage().toLowerCase();
 
+            List<RepositoryEntity> repos = repoRepository.getRepos( language, request.getMinStars(),sort);
 
-            return repositories.stream().map(this::mapToDto).collect(Collectors.toList());
+            return repos.stream().map(Mapper::repositoryEntityToDto).toList();
 
         } catch (DataAccessException e) {
             log.error("Database error occurred while fetching filtered repositories", e);
-            throw new IllegalStateException("Database operation failed. Please try again.");
+            throw new IllegalStateException("Database operation failed");
         }
     }
 
-    private RepositoryDto mapToDto(RepositoryEntity entity) {
-        RepositoryDto.Owner owner = new RepositoryDto.Owner();
-        owner.setLogin(entity.getOwnerName());
 
-        return new RepositoryDto(
-                entity.getId(),
-                entity.getName(),
-                entity.getFullName(),
-                entity.getDescription(),
-                entity.getStars(),
-                entity.getForks_count(),
-                entity.getHtml_url(),
-                entity.getLanguage(),
-                entity.getLastUpdated(),
-                owner
-        );
-    }
 }
+
+
+
+/*
+
+Get Filtered Repositories
+
+First - Trying to fetch the records from database, but it was not giving me records, due to postgres is case-sensitive
+I used Lower () method in Query to get records,
+
+Second - but above approach may lead to performance issue so i have created index on entity
+       indexes = { @Index(name = "idx_language", columnList = "language") })
+
+
+Search and Save Repositories
+
+first -  storing the repositories using for loop directly one by one (save method update the record if already present)
+
+second  - used if statement to check the id in db present or not if present skipping it (each time checking or hitting db to is there id present or not this may lead performance issue)
+
+third  - Trying to store the data in batches with the help of saveAll method (but its same behave like save method updating record if already present)
+
+fourth - Trying to get all the ids from the database and stored in hashset, and checking the set contains the id or not if yes skipping it from adding in list
+
+fifth - But if our DB have millions of records. then collecting all the ids and checking its present or not its may lead to performance issue again
+
+sixth - collecting all the ids only, from githubapi response and storing then into list and passing to db checking is the id IN list or not and only collecting the duplicate records
+*/
