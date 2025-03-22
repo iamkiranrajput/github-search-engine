@@ -11,10 +11,21 @@ import java.util.List;
 
 public interface GithubRepoRepository extends JpaRepository<RepositoryEntity,Integer> {
 
+/*
+    @Query("SELECT * FROM RepositoryEntity WHERE LOWER(language) = LOWER(:language) AND stars >= :minStars")
+*/
+
+    @Query("SELECT re FROM RepositoryEntity re WHERE (:language IS NULL OR re.language = :language) AND re.stars >= :minStars")
+    List<RepositoryEntity> getRepos(@Param("language") String language, @Param("minStars") Integer minStars,Sort sort);
 
 
-    @Query("SELECT r FROM RepositoryEntity r WHERE LOWER(r.language) = LOWER(:language) AND r.stars >= :minStars")
-    List<RepositoryEntity> findByLanguageAndStarsGreaterThanEqual(@Param("language") String language, @Param("minStars") Integer minStars);
 
+    List<RepositoryEntity> findByLanguage(String language, Sort sort);
 
-    List<RepositoryEntity> findByLanguage(String language, Sort sort);}
+   /* @Query("SELECT id FROM RepositoryEntity")
+    List<Integer> findAllIds();
+    */
+
+    @Query("SELECT id FROM RepositoryEntity WHERE id IN :ids")
+    List<Integer> findAlreadyPresentRecords(@Param("ids") List<Integer> ids);
+}
