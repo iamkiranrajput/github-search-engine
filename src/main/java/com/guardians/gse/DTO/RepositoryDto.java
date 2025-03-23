@@ -3,13 +3,15 @@ package com.guardians.gse.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
+import java.io.Serializable;
 import java.time.Instant;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @ToString
 @Builder
-public class RepositoryDto {
+public class RepositoryDto implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private Integer id;
     private String name;
@@ -34,10 +36,15 @@ public class RepositoryDto {
     private Instant lastUpdated;
 
     @JsonProperty("owner")
-    private Owner owner; // ✅ Corrected: Define Owner class inside DTO
+    private Owner owner;
 
     @Data
-    public static class Owner {
+    public static class Owner implements Serializable  {
+        private static final long serialVersionUID = 1L;
         private String login;
+
+        public Owner(String login) {
+            this.login = login;
+        }
     }
 }
