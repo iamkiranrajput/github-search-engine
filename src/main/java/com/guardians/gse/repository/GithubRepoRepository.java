@@ -4,6 +4,7 @@ package com.guardians.gse.repository;
 import com.guardians.gse.model.RepositoryEntity;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,4 +29,27 @@ public interface GithubRepoRepository extends JpaRepository<RepositoryEntity,Int
 
     @Query("SELECT id FROM RepositoryEntity WHERE id IN :ids")
     List<Integer> findAlreadyPresentRecords(@Param("ids") List<Integer> ids);
+
+
+
+
+    @Modifying
+    @Query(value = """
+    INSERT INTO repositories (id, name, full_name, description, owner_name, language, stars, forks, url, last_updated)
+    VALUES (:#{#repo.id}, :#{#repo.name}, :#{#repo.fullName}, :#{#repo.description}, :#{#repo.ownerName},
+            :#{#repo.language}, :#{#repo.stars}, :#{#repo.forks}, :#{#repo.url}, :#{#repo.lastUpdated})
+    ON CONFLICT (id)
+    DO UPDATE SET
+        name = EXCLUDED.name,
+        full_name = EXCLUDED.full_name,
+        description = EXCLUDED.description,
+        owner_name = EXCLUDED.owner_name,
+        language = EXCLUDED.language,
+        stars = EXCLUDED.stars,
+        forks = EXCLUDED.forks,
+        url = EXCLUDED.url,
+        last_updated = EXCLUDED.last_updated
+    """, nativeQuery = true)
+    void upsertRepositoryEntity(@Param("repo") RepositoryEntity repo);
+
 }

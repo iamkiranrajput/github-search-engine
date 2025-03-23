@@ -4,16 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.guardians.gse.controller.RepositoryController;
 import com.guardians.gse.dto.RepositoryDto;
 import com.guardians.gse.dto.SearchRequest;
-import com.guardians.gse.exception.GitHubRateLimitException;
 import com.guardians.gse.exception.GithubApiException;
-import com.guardians.gse.service.RepositoryServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpClientErrorException;
+
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,18 +26,21 @@ public class GitHubApiClient {
         this.restTemplate = restTemplate;
     }
 
-    public List<RepositoryDto> fetchRepositories(SearchRequest request) {
+    int RETRY = 3;
+
+
+    public synchronized List<RepositoryDto> fetchRepositories(SearchRequest request) {
         String query = request.getQuery() + "+language:" + request.getLanguage() + "+stars:>0";
         List<RepositoryDto> repositories = new ArrayList<>();
-
         int page = 1;
         int perPage = 100;
-        try {
+        int retryCount = 3; // Track retries locally
 
-            while (true) {
-                String url = GITHUB_API_URL + "?q=" + query + "&sort="+request.getSort()+"&order=desc&per_page=" + perPage + "&page=" + page;
+        while (true) {
+            try {
+                String url = GITHUB_API_URL + "?q=" + query + "&sort=" + request.getSort() +
+                        "&order=desc&per_page=" + perPage + "&page=" + page;
                 log.info("Fetching from GitHub API: {}", url);
-
 
                 ResponseEntity<JsonNode> response = restTemplate.getForEntity(url, JsonNode.class);
                 JsonNode items = Objects.requireNonNull(response.getBody()).get("items");
@@ -48,8 +48,7 @@ public class GitHubApiClient {
                 if (items == null || items.isEmpty()) break;
 
                 for (JsonNode item : items) {
-                    RepositoryDto.Owner owner = new RepositoryDto.Owner();
-                    owner.setLogin(item.get("owner").get("login").asText());
+                    RepositoryDto.Owner owner = new RepositoryDto.Owner(item.get("owner").get("login").asText());
 
                     RepositoryDto dto = new RepositoryDto(
                             item.get("id").asInt(),
@@ -65,16 +64,32 @@ public class GitHubApiClient {
                     );
                     repositories.add(dto);
                 }
-                if (items.size() < perPage) break; // Stop if we received fewer results than per_page
+
+                if (items.size() < perPage) break; // Stop if fewer results than perPage
                 page++;
+            } catch (HttpClientErrorException.Forbidden e) {
+                if (page >= 10) {
+                    log.error("GitHub API Rate Limit Exceeded: {}", e.getMessage());
+                    RepositoryController.STATUS = true;
+                    return repositories;
+                }
 
+                log.error("Too many requests. Waiting 10 seconds before retrying...");
+                try {
+                    Thread.sleep(10000); // Wait before retrying
+                    retryCount--;
+
+                    if (retryCount == 0) {
+                        throw new GithubApiException("GitHub API Rate Limit Exceeded: " + e.getMessage());
+                    }
+
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    return repositories;
+                }
             }
-        } catch (HttpClientErrorException e) {
-
-            log.error("GitHub API Rate Limit Exceeded: {}", e.getMessage());
-            RepositoryController.STATUS=true;
-//            throw new GithubApiException("GitHub API Rate Limit Exceeded: " + e.getMessage());
         }
         return repositories;
     }
+
 }

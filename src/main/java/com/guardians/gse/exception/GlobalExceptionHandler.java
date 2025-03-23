@@ -1,5 +1,6 @@
 package com.guardians.gse.exception;
 import com.guardians.gse.dto.ApiResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -46,13 +48,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(GithubApiException.class)
     public ResponseEntity<ApiResponse<Map<String, Object>>> handleGithubApiException(GithubApiException ex) {
+        log.warn("GitHub API Rate Limit Exceeded");
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.FORBIDDEN.value());
         error.put("error", "GitHub API Rate Limit Exceeded");
-        error.put("message", ex.getMessage());
 
-        return new ResponseEntity<>(new ApiResponse<>("GitHub API Rate Limit Exceeded",error), HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(new ApiResponse<>("Too Many Request ",error), HttpStatus.FORBIDDEN);
     }
 
 
@@ -60,12 +61,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Map<String,Object>>> handleGeneralException(Exception ex) {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
-        error.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
         error.put("error", "Internal Server Error");
-        error.put("message", ex.getMessage());
 
         return new ResponseEntity<>(new ApiResponse<>("Internal Server Error",error), HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
+
 //    @ExceptionHandler(Exception.class)
 //    public ResponseEntity<Map<String,String>> handleException(Exception ex) {
 //        return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));

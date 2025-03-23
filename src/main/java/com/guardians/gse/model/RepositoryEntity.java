@@ -34,4 +34,6 @@ public class RepositoryEntity {
 
     @Column(name = "last_updated")
     private Instant lastUpdated;
+
+
 }

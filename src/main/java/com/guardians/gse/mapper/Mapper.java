@@ -25,7 +25,7 @@ public class Mapper {
 
 
     public static RepositoryDto repositoryEntityToDto(RepositoryEntity entity) {
-        RepositoryDto.Owner owner = new RepositoryDto.Owner();
+        RepositoryDto.Owner owner = new RepositoryDto.Owner(entity.getOwnerName());
         owner.setLogin(entity.getOwnerName());
 
         return RepositoryDto.builder()
