@@ -102,7 +102,7 @@ json
 }
 
 ```
-🔹 Fetch GitHub User Details
+🔹 Fetch GitHub Repositories from Databases
 
 Endpoint: `GET /api/github/repositories?language=python&minStars=50&sort=stars`
 
