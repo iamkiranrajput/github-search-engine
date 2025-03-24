@@ -104,19 +104,7 @@ json
 ```
 🔹 Fetch GitHub User Details
 
-Endpoint: `GET /api/github/repositories`
-
-Example Request:
-
-```
-{
-  "query": "Spring Boot",
-  "language": "Java",
-  "minStars": 50,
-  "sort": "stars"
-}
-
-```
+Endpoint: `GET /api/github/repositories?language=python&minStars=50&sort=stars`
 
 📜 Logging & Exception Handling
 Logging: Uses Slf4j for structured logging of API calls and errors.
