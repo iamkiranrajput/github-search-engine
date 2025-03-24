@@ -1,7 +1,10 @@
 package com.guardians.gse.mapper;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.guardians.gse.dto.RepositoryDto;
 import com.guardians.gse.model.RepositoryEntity;
+
+import java.time.Instant;
 
 public class Mapper {
     private Mapper() {}
@@ -41,5 +44,36 @@ public class Mapper {
                 .lastUpdated(entity.getLastUpdated())
                 .build();
     }
+
+    public static RepositoryDto gitHubResponseToDto(JsonNode item) {
+        RepositoryDto.Owner owner = new RepositoryDto.Owner(item.get("owner").get("login").asText());
+        return RepositoryDto.builder()
+                .owner(owner)
+                .name(item.get("name").asText())
+                .id( item.get("id").asInt())
+                .fullName(item.get("full_name").asText())
+                .description(item.get("description").asText())
+                .stars(item.get("stargazers_count").asInt())
+                .forks(item.get("forks_count").asInt())
+                .url(item.get("html_url").asText())
+                .language(item.get("language").asText())
+                .lastUpdated(Instant.parse(item.get("updated_at").asText()))
+                .build();
+    }
+
+
+//    RepositoryDto dto = new RepositoryDto(
+//            item.get("id").asInt(),
+//            item.get("name").asText(),
+//            item.has("full_name") ? item.get("full_name").asText() : "",
+//            item.has("description") ? item.get("description").asText() : "",
+//            item.get("stargazers_count").asInt(),
+//            item.get("forks_count").asInt(),
+//            item.has("html_url") ? item.get("html_url").asText() : "",
+//            item.has("language") ? item.get("language").asText() : "",
+//            Instant.parse(item.get("updated_at").asText()),
+//            owner
+//    );
+
 
 }
