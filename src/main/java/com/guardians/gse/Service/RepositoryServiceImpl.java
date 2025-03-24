@@ -3,23 +3,21 @@
     import com.guardians.gse.dto.RepositoryDto;
     import com.guardians.gse.dto.RepositoryRequest;
     import com.guardians.gse.dto.SearchRequest;
-    import com.guardians.gse.exception.GitHubRateLimitException;
+    import com.guardians.gse.exception.GitHubRepositoryNotFoundException;
     import com.guardians.gse.mapper.Mapper;
     import com.guardians.gse.model.RepositoryEntity;
     import com.guardians.gse.repository.GithubRepoRepository;
     import com.guardians.gse.util.GitHubApiClient;
     import jakarta.transaction.Transactional;
     import lombok.extern.slf4j.Slf4j;
-    import org.springframework.cache.annotation.Cacheable;
     import org.springframework.dao.DataAccessException;
+    import org.springframework.data.domain.Page;
+    import org.springframework.data.domain.PageRequest;
+    import org.springframework.data.domain.Pageable;
     import org.springframework.data.domain.Sort;
     import org.springframework.stereotype.Service;
 
-    import java.util.ArrayList;
-    import java.util.HashSet;
     import java.util.List;
-    import java.util.Set;
-    import java.util.stream.Collectors;
 
     @Service
     @Slf4j
@@ -58,7 +56,6 @@
 
 
         //    @Cacheable(value = "githubRepositories", key = "#query")
-
         /*
         @Override
         public synchronized List<RepositoryDto> searchAndSaveRepositories(SearchRequest request,String query) {
@@ -96,9 +93,6 @@
 
 
 
-
-
-
             @Override
         public List<RepositoryDto> getFilteredRepositories(RepositoryRequest request) {
 
@@ -117,32 +111,47 @@
             }
         }
 
+        public List<RepositoryDto> getRepositoriesByUsername(String username) {
+            log.info("Fetching repositories for user");
+
+            // Check if repositories are already in the database
+            List<RepositoryEntity> existingRepositories = repoRepository.findByOwnerName(username);
+
+            if (!existingRepositories.isEmpty()) {
+                log.info("Returning repositories from database for user: {}", username);
+                return existingRepositories.stream().map(Mapper::repositoryEntityToDto).toList();
+            }
+
+            // Fetch from GitHub API
+            List<RepositoryDto> repositories = gitHubApiClient.fetchRepositoriesByUsername(username);
+
+            if (repositories == null || repositories.isEmpty()) {
+                log.warn("No repositories found for user: {}", username);
+                throw new GitHubRepositoryNotFoundException("No repositories found for user " + username);
+            }
+
+            List<RepositoryEntity> entities = repositories.stream().map(Mapper::dtoToRepositoryEntity).toList();
+            repoRepository.saveAll(entities);
+            log.info("Repositories saved to database : {}", username);
+
+            return repositories;
+        }
+
+        @Override
+        public Page<RepositoryDto> getRepositoriesByUsernamePagination(String username, int page, int size, String sortBy, String direction) {
+            log.info("Fetching paginated repositories for user: {}, Page: {}, Size: {}, SortBy: {}, Direction: {}",
+                    username, page, size, sortBy, direction);
+
+            Sort.Direction sortDirection = direction.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC;
+            Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+            Page<RepositoryEntity> pagedRepositories = repoRepository.findByOwnerName(username, pageable);
+
+            return pagedRepositories.map(Mapper::repositoryEntityToDto);
+        }
+
+
     }
 
 
 
-    /*
-
-    Get Filtered Repositories
-
-    First - Trying to fetch the records from database, but it was not giving me records, due to postgres is case-sensitive
-    I used Lower () method in Query to get records,
-
-    Second - but above approach may lead to performance issue so i have created index on entity
-           indexes = { @Index(name = "idx_language", columnList = "language") })
-
-
-    Search and Save Repositories
-
-    first -  storing the repositories using for loop directly one by one (save method update the record if already present)
-
-    second  - used if statement to check the id in db present or not if present skipping it (each time checking or hitting db to is there id present or not this may lead performance issue)
-
-    third  - Trying to store the data in batches with the help of saveAll method (but its same behave like save method updating record if already present)
-
-    fourth - Trying to get all the ids from the database and stored in hashset, and checking the set contains the id or not if yes skipping it from adding in list
-
-    fifth - But if our DB have millions of records. then collecting all the ids and checking its present or not its may lead to performance issue again
-
-    sixth - collecting all the ids only, from githubapi response and storing then into list and passing to db checking is the id IN list or not and only collecting the duplicate records
-    */
