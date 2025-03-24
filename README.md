@@ -8,17 +8,17 @@ The **GitHub API Service** is a **Spring Boot-based** application that interacts
 
 - **Postman API Collection:** [Postman Documentation](#) *(Add actual link)*
 - **Docker Hub Image:**
-  - **GitHub API Service**: `docker pull yourdockerhub/github-api:latest`
+- **GitHub API Service**: `docker pull yourdockerhub/github-api:latest` 
 
 ---
 
 ## 🛠️ Features
 
-✅ **Fetch GitHub Repositories**: Retrieve public repositories for a user or organization.  
-✅ **Get User Information**: Fetch GitHub user details using their username.  
-✅ **Pagination & Sorting**: Supports pagination and sorting for large data sets.  
-✅ **Logging & Exception Handling**: Uses **Slf4j** for structured logging and **GlobalExceptionHandler** for error management.  
-✅ **Swagger API Documentation**: Provides an interactive API documentation via Swagger UI.  
+ **Fetch GitHub Repositories**: Retrieve public repositories for a user or organization.  
+ **Get User Information**: Fetch GitHub user details using their username.  
+ **Pagination & Sorting**: Supports pagination and sorting for large data sets.  
+ **Logging & Exception Handling**: Uses **Slf4j** for structured logging and **GlobalExceptionHandler** for error management.  
+ **Swagger API Documentation**: Provides an interactive API documentation via Swagger UI.  
 
 ---
 
@@ -26,9 +26,9 @@ The **GitHub API Service** is a **Spring Boot-based** application that interacts
 
 - **Java 11+** → Core backend logic  
 - **Spring Boot** → Framework for REST API  
-- **Spring WebClient** → For consuming GitHub API  
-- **JPA/Hibernate** → ORM for data persistence (if needed)  
-- **PostgreSQL / H2** → Database options  
+- **Spring WebClient / RestTemplate** → For consuming GitHub API  
+- **JPA/Hibernate** → ORM for data persistence 
+- **PostgreSQL** → Database options  
 - **Lombok** → Reduce boilerplate code  
 - **Maven** → Dependency management  
 
@@ -79,44 +79,36 @@ src/
      └── java/                      # Unit and integration tests
 ```
 
-⚙️ Configuration
-The application requires a GitHub Personal Access Token (PAT) for authentication when interacting with the GitHub API.
 
-🔹 Sample application.properties
-properties
-Copy
-Edit
-github.api.base-url=https://api.github.com
-github.api.token=your_github_access_token
-server.port=8080
 📖 Usage
 🔹 Fetch Public Repositories
-Endpoint: GET /api/github/repos/{username}
-Example Response:
+Endpoint: `POST /api/github/search`
+
+Example Request:
 
 json
 ```
-[
-  {
-    "name": "Spring-Boot-App",
-    "url": "https://github.com/iamkiranrajput/Spring-Boot-App",
-    "stars": 45,
-    "forks": 10
-  }
-]
+{
+  "query": "Spring Boot",
+  "language": "Java",
+  "sort": "stars"
+}
+
 ```
 🔹 Fetch GitHub User Details
 
-Endpoint: GET /api/github/user/{username}
-Example Response:
+Endpoint: `GET /api/github/repositories`
+
+Example Request:
 
 ```
 {
-  "username": "iamkiranrajput",
-  "profileUrl": "https://github.com/iamkiranrajput",
-  "publicRepos": 15,
-  "followers": 200
+  "query": "Spring Boot",
+  "language": "Java",
+  "minStars": 50,
+  "sort": "stars"
 }
+
 ```
 
 📜 Logging & Exception Handling
@@ -131,9 +123,9 @@ ApiException	Generic exception handler for API errors.
 🗂 API Endpoints
 HTTP Method	Endpoint	Description
 
-GET	/api/github/repos/{username}	Fetch all public repositories of a GitHub user
-GET	/api/github/user/{username}	Fetch GitHub user profile details (on working)
-GET	/api/github/repos/{username}?page=0&size=5&sort=stars,desc	Fetch repositories with pagination & sorting
+POST	`/api/github/search`	Fetch all public repositories of a GitHub user
+GET	`/api/github/repositories`	Fetch GitHub user profile details (on working)
+
 🛠️ Testing the API
 To test the API, use Postman or cURL.
 
