@@ -67,16 +67,23 @@ src/
  ├── main/
  │   ├── java/
  │   │   └── com/githubapi/
- │   │       ├── controller/        # REST controllers
+ │   │       ├── controller/        # Handles HTTP requests
  │   │       ├── dto/               # Data Transfer Objects (DTOs)
- │   │       ├── exception/         # Custom exception handlers
+ │   │       ├── exception/         # Custom exception handling
+ │   │       ├── mapper/            # Maps DTOs to Entities and vice versa
+ │   │       ├── model/             # Entity models (if database is used)
+ │   │       ├── repository/        # Data access layer (JPA repositories)
  │   │       ├── service/           # Business logic layer
  │   │       ├── util/              # Utility classes
- │   │       └── client/            # GitHub API client integration
- │   └── resources/
- │       ├── application.properties # Application configuration
+ │   │       ├── config/            # Configuration classes (e.g., Swagger, WebClient)
+ │   ├── resources/
+ │   │   ├── application.properties # Application configuration
  └── test/
-     └── java/                      # Unit and integration tests
+ │   └── java/                      # Unit and integration tests
+ ├── Dockerfile                     # Docker configuration
+ ├── docker-compose.yml              # Multi-container setup (if needed)
+ ├── README.md                       # Project documentation
+
 ```
 
 
