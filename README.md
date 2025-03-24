@@ -6,7 +6,7 @@ The **GitHub API Service** is a **Spring Boot-based** application that interacts
 
 ## 🚀 Quick Links
 
-- **Postman API Collection:** [Postman Documentation](#) *(Add actual link)*
+- **Postman API Collection:** [Postman Documentation](https://www.postman.com/glitch-guardians/workspace/public-guardians/collection/33641536-e873cb3e-6bd0-4cba-a1ba-5751e96964de?action=share&creator=33641536)
 - **Docker Hub Image:**
 - **GitHub API Service**: `docker pull yourdockerhub/github-api:latest` 
 
