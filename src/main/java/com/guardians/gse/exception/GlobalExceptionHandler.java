@@ -22,7 +22,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Map<String, String>> handleValidationException(MethodArgumentNotValidException ex) {
-
         Map<String, String> errors = new HashMap<>();
 
         // Collecting field errors
@@ -35,40 +34,43 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoHandlerFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ApiResponse<String> handleNotFound(NoHandlerFoundException ex) {
+        log.warn("Endpoint not found");
         return new ApiResponse<>("Endpoint not found", "Invalid API URL");
     }
 
     @ExceptionHandler(DataAccessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<String> handleDatabaseAccessException(DataAccessException ex) {
+        log.warn("Database Access Error");
         return new ApiResponse<>("Database Access Error ", ex.getMessage());
     }
 
 
-
-    @ExceptionHandler(GithubApiException.class)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> handleGithubApiException(GithubApiException ex) {
-        log.warn("GitHub API Rate Limit Exceeded");
+    @ExceptionHandler(GitHubRateLimitException.class)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> handleGitHubRateLimitException(GitHubRateLimitException ex) {
+        log.warn(ex.getMessage());
         Map<String, Object> error = new HashMap<>();
-        error.put("timestamp", LocalDateTime.now());
-        error.put("error", "GitHub API Rate Limit Exceeded");
-
+        error.put("error", ex.getMessage());
         return new ResponseEntity<>(new ApiResponse<>("Too Many Request ",error), HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(GitHubRepositoryNotFoundException.class)
+    public ResponseEntity<ApiResponse<Map<String,Object>>> handleGitHubUserNotFound(GitHubRepositoryNotFoundException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(),null), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(GithubApiException.class)
+    public ResponseEntity<ApiResponse<Map<String,Object>>> handleGithubApiException(GithubApiException ex) {
+        return new ResponseEntity<>(new ApiResponse<>(ex.getMessage(),null), HttpStatus.NOT_FOUND);
+    }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Map<String,Object>>> handleGeneralException(Exception ex) {
         Map<String, Object> error = new HashMap<>();
         error.put("timestamp", LocalDateTime.now());
-        error.put("error", "Internal Server Error");
+        error.put("error", "Internal Server Error"+ex.getMessage());
 
         return new ResponseEntity<>(new ApiResponse<>("Internal Server Error",error), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-
-//    @ExceptionHandler(Exception.class)
-//    public ResponseEntity<Map<String,String>> handleException(Exception ex) {
-//        return ResponseEntity.status(500).body(Map.of("error", ex.getMessage()));
-//    }
 }
