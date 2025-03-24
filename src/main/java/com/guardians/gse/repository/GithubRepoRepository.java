@@ -1,7 +1,10 @@
 package com.guardians.gse.repository;
 
 
+import com.guardians.gse.dto.RepositoryDto;
 import com.guardians.gse.model.RepositoryEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -20,7 +23,7 @@ public interface GithubRepoRepository extends JpaRepository<RepositoryEntity,Int
     List<RepositoryEntity> getRepos(@Param("language") String language, @Param("minStars") Integer minStars,Sort sort);
 
 
-
+    List<RepositoryEntity> findByOwnerName(String username);
     List<RepositoryEntity> findByLanguage(String language, Sort sort);
 
    /* @Query("SELECT id FROM RepositoryEntity")
@@ -52,4 +55,11 @@ public interface GithubRepoRepository extends JpaRepository<RepositoryEntity,Int
     """, nativeQuery = true)
     void upsertRepositoryEntity(@Param("repo") RepositoryEntity repo);
 
+
+    Page<RepositoryEntity> findByOwnerName(String username, Pageable pageable);
+
+
+
+
 }
+
