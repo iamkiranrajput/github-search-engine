@@ -36,7 +36,7 @@ public class RepositoryController {
             @Valid @RequestBody SearchRequest request) {
 
         log.info("Received request to search repositories: {}", request);
-        List<RepositoryDto> repositories = repositoryService.searchAndSaveRepositories(request, request.getQuery());
+        List<RepositoryDto> repositories = repositoryService.searchAndSaveRepositories(request);
 
         if (repositories.isEmpty()) {
             return ResponseEntity.ok(new ApiResponse<>("No repositories found", null));

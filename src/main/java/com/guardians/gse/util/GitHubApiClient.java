@@ -89,7 +89,6 @@ public class GitHubApiClient {
 
 
     public List<RepositoryDto> fetchRepositoriesByUsername(String username) {
-        log.info("Fetching repositories for GitHub user: {}", username);
         List<RepositoryDto> repositories = new ArrayList<>();
 
         try {
@@ -97,7 +96,6 @@ public class GitHubApiClient {
             JsonNode items = Objects.requireNonNull(response.getBody());
 
             if (items.isEmpty()) {
-                log.info("No repositories found for user: {}", username);
                 return repositories;
             }
 
